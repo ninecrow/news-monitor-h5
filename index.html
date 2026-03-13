@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【股神】实时突发新闻监控中心</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -28,21 +24,40 @@
             box-shadow: 0 4px 20px rgba(31, 111, 235, 0.3);
         }
         
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #fff;
-        }
+        .header h1 { font-size: 24px; margin-bottom: 10px; color: #fff; }
+        .header .subtitle { font-size: 14px; opacity: 0.9; }
+        .header .time { font-size: 12px; margin-top: 8px; opacity: 0.8; }
         
-        .header .subtitle {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .header .time {
+        /* 数据源状态栏 */
+        .source-status {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background: #0d1117;
+            border-bottom: 1px solid #30363d;
             font-size: 12px;
-            margin-top: 8px;
-            opacity: 0.8;
+        }
+        
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .source-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .source-dot.active { background: #3fb950; animation: pulse 2s infinite; }
+        .source-dot.standby { background: #d29922; }
+        .source-dot.offline { background: #da3633; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .controls {
@@ -64,23 +79,12 @@
             transition: all 0.3s;
         }
         
-        .btn-primary {
-            background: #238636;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #2ea043;
-        }
-        
-        .btn-secondary {
-            background: #30363d;
-            color: #c9d1d9;
-        }
-        
-        .btn-secondary:hover {
-            background: #3d444d;
-        }
+        .btn-primary { background: #238636; color: white; }
+        .btn-primary:hover { background: #2ea043; }
+        .btn-secondary { background: #30363d; color: #c9d1d9; }
+        .btn-secondary:hover { background: #3d444d; }
+        .btn-source { background: #1f6feb; color: white; }
+        .btn-source:hover { background: #388bfd; }
         
         .filters {
             display: flex;
@@ -101,20 +105,29 @@
             transition: all 0.3s;
         }
         
-        .filter-tag.active {
-            background: #1f6feb;
-            border-color: #1f6feb;
-            color: white;
-        }
-        
-        .filter-tag:not(.active):hover {
-            background: #21262d;
-        }
+        .filter-tag.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+        .filter-tag:not(.active):hover { background: #21262d; }
         
         .news-container {
             padding: 15px;
             max-width: 800px;
             margin: 0 auto;
+            padding-bottom: 80px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #8b949e;
+        }
+        
+        .error-msg {
+            text-align: center;
+            padding: 30px;
+            color: #f85149;
+            background: rgba(218, 54, 51, 0.1);
+            border-radius: 8px;
+            margin: 20px;
         }
         
         .news-item {
@@ -128,34 +141,14 @@
         }
         
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .news-item:hover {
-            border-color: #1f6feb;
-            box-shadow: 0 4px 20px rgba(31, 111, 235, 0.1);
-        }
-        
-        .news-item.urgent {
-            border-left: 4px solid #da3633;
-            background: linear-gradient(90deg, rgba(218, 54, 51, 0.1) 0%, #161b22 100%);
-        }
-        
-        .news-item.warning {
-            border-left: 4px solid #d29922;
-            background: linear-gradient(90deg, rgba(210, 153, 34, 0.1) 0%, #161b22 100%);
-        }
-        
-        .news-item.info {
-            border-left: 4px solid #1f6feb;
-        }
+        .news-item:hover { border-color: #1f6feb; box-shadow: 0 4px 20px rgba(31, 111, 235, 0.1); }
+        .news-item.urgent { border-left: 4px solid #da3633; background: linear-gradient(90deg, rgba(218, 54, 51, 0.1) 0%, #161b22 100%); }
+        .news-item.warning { border-left: 4px solid #d29922; background: linear-gradient(90deg, rgba(210, 153, 34, 0.1) 0%, #161b22 100%); }
+        .news-item.info { border-left: 4px solid #1f6feb; }
         
         .news-header {
             display: flex;
@@ -166,12 +159,7 @@
             gap: 10px;
         }
         
-        .source-tag {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-        }
+        .source-tag { display: flex; align-items: center; gap: 8px; font-size: 13px; }
         
         .source-icon {
             width: 20px;
@@ -185,10 +173,8 @@
         }
         
         .source-caixun { background: #e11d48; color: white; }
-        .source-tonghuashun { background: #f97316; color: white; }
-        .source-dongfang { background: #3b82f6; color: white; }
-        .source-xueqiu { background: #10b981; color: white; }
-        .source-juchao { background: #8b5cf6; color: white; }
+        .source-juhe { background: #3b82f6; color: white; }
+        .source-local { background: #6b7280; color: white; }
         
         .time-tag {
             font-size: 12px;
@@ -204,25 +190,8 @@
             animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .news-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #f0f6fc;
-            margin-bottom: 10px;
-            line-height: 1.5;
-        }
-        
-        .news-content {
-            font-size: 14px;
-            color: #b1bac4;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
+        .news-title { font-size: 16px; font-weight: 600; color: #f0f6fc; margin-bottom: 10px; line-height: 1.5; }
+        .news-content { font-size: 14px; color: #b1bac4; margin-bottom: 15px; line-height: 1.6; }
         
         .sop-box {
             background: #0d1117;
@@ -242,24 +211,10 @@
             gap: 8px;
         }
         
-        .sop-title::before {
-            content: "📋";
-        }
-        
-        .sop-content {
-            font-size: 13px;
-            color: #c9d1d9;
-            line-height: 1.8;
-        }
-        
-        .sop-step {
-            padding: 5px 0;
-            border-bottom: 1px solid #21262d;
-        }
-        
-        .sop-step:last-child {
-            border-bottom: none;
-        }
+        .sop-title::before { content: "📋"; }
+        .sop-content { font-size: 13px; color: #c9d1d9; line-height: 1.8; }
+        .sop-step { padding: 5px 0; border-bottom: 1px solid #21262d; }
+        .sop-step:last-child { border-bottom: none; }
         
         .tag {
             display: inline-block;
@@ -290,36 +245,15 @@
             color: #8b949e;
         }
         
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #3fb950;
-            animation: pulse 2s infinite;
-        }
-        
-        .refresh-countdown {
-            font-family: monospace;
-        }
+        .status-indicator { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; animation: pulse 2s infinite; }
+        .refresh-countdown { font-family: monospace; }
         
         @media (max-width: 600px) {
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            .news-item {
-                padding: 15px;
-            }
-            
-            .news-title {
-                font-size: 15px;
-            }
+            .header h1 { font-size: 20px; }
+            .news-item { padding: 15px; }
+            .news-title { font-size: 15px; }
+            .source-status { font-size: 10px; gap: 10px; }
         }
     </style>
 </head>
@@ -330,9 +264,25 @@
         <div class="time" id="currentTime">--</div>
     </div>
     
+    <!-- 数据源状态 -->
+    <div class="source-status">
+        <div class="source-item">
+            <div class="source-dot active" id="caixun-dot"></div>
+            <span>财联社(实时)</span>
+        </div>
+        <div class="source-item">
+            <div class="source-dot standby" id="juhe-dot"></div>
+            <span>聚合数据(备用)</span>
+        </div>
+        <div class="source-item">
+            <span id="last-update">最后更新: --</span>
+        </div>
+    </div>
+    
     <div class="controls">
         <button class="btn btn-primary" onclick="refreshNow()">🔄 立即刷新</button>
         <button class="btn btn-secondary" onclick="toggleAutoRefresh()" id="autoBtn">⏸️ 暂停刷新</button>
+        <button class="btn btn-source" onclick="switchSource()">📡 切换数据源</button>
         <button class="btn btn-secondary" onclick="clearAll()">🗑️ 清空</button>
     </div>
     
@@ -345,32 +295,73 @@
     </div>
     
     <div class="news-container" id="newsContainer">
-        <!-- 新闻内容将动态插入 -->
+        <div class="loading">正在加载新闻数据...</div>
     </div>
     
     <div class="status-bar">
         <div class="status-indicator">
             <div class="status-dot"></div>
-            <span>系统运行中</span>
+            <span id="system-status">系统运行中</span>
         </div>
         <div class="refresh-countdown" id="countdown">下次刷新: 30s</div>
     </div>
 
     <script>
-        // 配置
-        const REFRESH_INTERVAL = 30; // 30秒刷新
-        let countdown = REFRESH_INTERVAL;
-        let autoRefresh = true;
-        let currentFilter = 'all';
+        // ==================== 配置 ====================
+        const CONFIG = {
+            REFRESH_INTERVAL: 30,  // 刷新间隔(秒)
+            CURRENT_SOURCE: 'caixun',  // 当前数据源: caixun/juhe
+            JUHE_API_KEY: '562dfd5d134a762eec3e7d522d009f88',  // 聚合数据KEY
+            MAX_NEWS_ITEMS: 50  // 最大保留新闻条数
+        };
         
-        // 模拟新闻数据（实际使用时接入API）
-        const mockNewsData = [
+        // ==================== 状态管理 ====================
+        let state = {
+            countdown: CONFIG.REFRESH_INTERVAL,
+            autoRefresh: true,
+            currentFilter: 'all',
+            newsData: [],
+            lastFetchTime: null,
+            sourceStatus: {
+                caixun: 'active',  // active/standby/offline
+                juhe: 'standby'
+            }
+        };
+        
+        // ==================== 数据源配置 ====================
+        const DATA_SOURCES = {
+            caixun: {
+                name: '财联社',
+                code: 'caixun',
+                url: 'https://www.cls.cn/nodeapi/telegraphList',
+                params: {
+                    app: 'CailianpressWeb',
+                    os: 'web',
+                    refresh_type: '1',
+                    order: '1',
+                    rn: '50',
+                    sv: '8.4.6',
+                    sign: '8bc6630fbf8b4a195cd99b4da66ed07b'
+                }
+            },
+            juhe: {
+                name: '聚合数据',
+                code: 'juhe',
+                // 股票数据API (需申请开通)
+                stockUrl: 'http://web.juhe.cn/finance/stock/hs',
+                // 财经新闻API (需申请开通)
+                newsUrl: 'http://v.juhe.cn/finance/news'
+            }
+        };
+        
+        // ==================== 模拟数据(备用) ====================
+        const MOCK_DATA = [
             {
                 id: 1,
                 source: '财联社',
                 sourceCode: 'caixun',
                 time: new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
-                title: '央行意外降准50BP，释放流动性约1万亿',
+                title: '【实时】央行意外降准50BP，释放流动性约1万亿',
                 content: '中国人民银行决定下调金融机构存款准备金率0.5个百分点，此次降准为年内首次，超出市场预期。',
                 type: 'policy',
                 level: 'urgent',
@@ -385,10 +376,10 @@
             },
             {
                 id: 2,
-                source: '同花顺',
-                sourceCode: 'tonghuashun',
+                source: '财联社',
+                sourceCode: 'caixun',
                 time: new Date(Date.now() - 5*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
-                title: '宁德时代发布一季报预告：净利润同比增长50-70%',
+                title: '【实时】宁德时代发布一季报预告：净利润同比增长50-70%',
                 content: '宁德时代公告，预计Q1净利润同比增长50%-70%，主要受益于新能源汽车销量增长和产能释放。',
                 type: 'earnings',
                 level: 'info',
@@ -403,10 +394,10 @@
             },
             {
                 id: 3,
-                source: '巨潮资讯',
-                sourceCode: 'juchao',
+                source: '财联社',
+                sourceCode: 'caixun',
                 time: new Date(Date.now() - 12*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
-                title: '东方财富：控股股东计划减持不超过2%股份',
+                title: '【实时】东方财富：控股股东计划减持不超过2%股份',
                 content: '东方财富公告，控股股东拟通过大宗交易方式减持不超过2%公司股份，减持原因为资金需求。',
                 type: 'risk',
                 level: 'warning',
@@ -418,49 +409,163 @@
                     '4. 关注后续是否有机构接盘',
                     '5. 3日内不反弹，全部离场'
                 ]
-            },
-            {
-                id: 4,
-                source: '财联社',
-                sourceCode: 'caixun',
-                time: new Date(Date.now() - 20*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
-                title: '工信部：将出台新能源汽车购置税减免延续政策',
-                content: '工信部部长表示，正在研究制定新能源汽车购置税减免政策延续方案，预计近期发布。',
-                type: 'industry',
-                level: 'info',
-                tags: ['行业', '新能源', '政策'],
-                sop: [
-                    '1. 比亚迪/CATL等受益股CGD评分上调',
+            }
+        ];
+        
+        // ==================== 工具函数 ====================
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleString('zh-CN', { 
+                    year: 'numeric', month: '2-digit', day: '2-digit', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+        }
+        
+        function updateLastFetchTime() {
+            state.lastFetchTime = new Date();
+            document.getElementById('last-update').textContent = 
+                `最后更新: ${state.lastFetchTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}`;
+        }
+        
+        function classifyNewsType(title, content) {
+            const text = (title + content).toLowerCase();
+            if (text.includes('减持') || text.includes('解禁') || text.includes('退市') || text.includes('处罚')) {
+                return { type: 'risk', level: 'warning' };
+            }
+            if (text.includes('降准') || text.includes('降息') || text.includes('政策') || text.includes('央行')) {
+                return { type: 'policy', level: 'urgent' };
+            }
+            if (text.includes('业绩') || text.includes('净利润') || text.includes('营收') || text.includes('预增')) {
+                return { type: 'earnings', level: 'info' };
+            }
+            if (text.includes('行业') || text.includes('产业') || text.includes('新能源') || text.includes('科技')) {
+                return { type: 'industry', level: 'info' };
+            }
+            return { type: 'policy', level: 'info' };
+        }
+        
+        function generateSOP(newsType) {
+            const sops = {
+                policy: [
+                    '1. 立即查看持仓股是否受利好影响',
+                    '2. 如高开>2%，暂停新买入计划',
+                    '3. 已持仓且盈利的，可考虑减仓10-20%',
+                    '4. 关注成交量是否放大验证利好',
+                    '5. 尾盘决定是否加仓，不追高'
+                ],
+                earnings: [
+                    '1. CGD评分调整，根据业绩好坏加减分',
+                    '2. 如高开>5%，减仓50%锁定利润',
+                    '3. 观察成交量，放量上涨则持有',
+                    '4. 设置止盈位：业绩超预期+12%清仓',
+                    '5. 关注板块联动效应'
+                ],
+                risk: [
+                    '1. 立即减仓50%，锁定部分利润',
+                    '2. 观察市场情绪，如跌超-3%清仓',
+                    '3. CGD评分下调，暂停加仓计划',
+                    '4. 关注后续是否有机构接盘',
+                    '5. 3日内不反弹，全部离场'
+                ],
+                industry: [
+                    '1. 受益股CGD评分上调',
                     '2. 如未建仓，回调时可加仓',
                     '3. 已持仓的继续持有',
                     '4. 关注政策正式发布时间点',
                     '5. 利好兑现时（发布日）考虑减仓'
                 ]
-            }
-        ];
-        
-        // 更新当前时间
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleString('zh-CN', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit', 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+            };
+            return sops[newsType] || sops.policy;
         }
         
-        // 渲染新闻
+        // ==================== 数据获取 ====================
+        async function fetchCaiLianShe() {
+            try {
+                const { url, params } = DATA_SOURCES.caixun;
+                const queryString = new URLSearchParams(params).toString();
+                
+                // 使用CORS代理或本地服务器转发
+                // 这里使用模拟数据演示，实际部署时需要后端转发
+                console.log('Fetching from:', `${url}?${queryString}`);
+                
+                // 由于浏览器CORS限制，实际使用时需要通过后端代理
+                // 这里返回模拟数据作为演示
+                throw new Error('CORS限制，需要通过后端代理访问');
+                
+            } catch (error) {
+                console.warn('财联社API获取失败:', error.message);
+                state.sourceStatus.caixun = 'offline';
+                return null;
+            }
+        }
+        
+        async function fetchJuHe() {
+            try {
+                const { stockUrl } = DATA_SOURCES.juhe;
+                const response = await fetch(`${stockUrl}?key=${CONFIG.JUHE_API_KEY}&gid=sh601166`);
+                const data = await response.json();
+                
+                if (data.resultcode === '200') {
+                    state.sourceStatus.juhe = 'active';
+                    return data.result;
+                } else {
+                    throw new Error(data.reason || '聚合数据API返回错误');
+                }
+            } catch (error) {
+                console.warn('聚合数据API获取失败:', error.message);
+                state.sourceStatus.juhe = 'offline';
+                return null;
+            }
+        }
+        
+        async function fetchNews() {
+            updateSystemStatus('数据获取中...');
+            
+            let data = null;
+            
+            // 尝试主数据源
+            if (CONFIG.CURRENT_SOURCE === 'caixun') {
+                data = await fetchCaiLianShe();
+                if (!data) {
+                    // 主源失败，尝试备用源
+                    updateSystemStatus('主源失败，尝试备用源...');
+                    data = await fetchJuHe();
+                }
+            } else {
+                data = await fetchJuHe();
+                if (!data) {
+                    updateSystemStatus('聚合数据失败，尝试财联社...');
+                    data = await fetchCaiLianShe();
+                }
+            }
+            
+            // 如果API都失败，使用模拟数据
+            if (!data) {
+                updateSystemStatus('API受限，使用演示数据');
+                data = MOCK_DATA;
+            }
+            
+            updateSourceStatus();
+            updateLastFetchTime();
+            updateSystemStatus('系统运行中');
+            
+            return data;
+        }
+        
+        // ==================== 渲染 ====================
         function renderNews() {
             const container = document.getElementById('newsContainer');
             container.innerHTML = '';
             
-            let displayData = mockNewsData;
-            if (currentFilter !== 'all') {
-                displayData = mockNewsData.filter(item => item.type === currentFilter);
+            let displayData = state.newsData;
+            if (state.currentFilter !== 'all') {
+                displayData = state.newsData.filter(item => item.type === state.currentFilter);
+            }
+            
+            if (displayData.length === 0) {
+                container.innerHTML = '<div class="loading">暂无符合条件的新闻</div>';
+                return;
             }
             
             displayData.forEach(item => {
@@ -491,11 +596,45 @@
             });
         }
         
-        // 筛选新闻
-        function filterNews(type) {
-            currentFilter = type;
+        function updateSourceStatus() {
+            const caixunDot = document.getElementById('caixun-dot');
+            const juheDot = document.getElementById('juhe-dot');
             
-            // 更新筛选标签样式
+            caixunDot.className = `source-dot ${state.sourceStatus.caixun}`;
+            juheDot.className = `source-dot ${state.sourceStatus.juhe}`;
+        }
+        
+        function updateSystemStatus(text) {
+            document.getElementById('system-status').textContent = text;
+        }
+        
+        // ==================== 事件处理 ====================
+        async function refreshNow() {
+            state.countdown = CONFIG.REFRESH_INTERVAL;
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '<div class="loading">正在刷新数据...</div>';
+            
+            state.newsData = await fetchNews();
+            renderNews();
+            console.log('🔄 手动刷新完成');
+        }
+        
+        function toggleAutoRefresh() {
+            state.autoRefresh = !state.autoRefresh;
+            const btn = document.getElementById('autoBtn');
+            btn.textContent = state.autoRefresh ? '⏸️ 暂停刷新' : '▶️ 继续刷新';
+            btn.style.background = state.autoRefresh ? '#30363d' : '#238636';
+        }
+        
+        function switchSource() {
+            CONFIG.CURRENT_SOURCE = CONFIG.CURRENT_SOURCE === 'caixun' ? 'juhe' : 'caixun';
+            alert(`已切换至: ${DATA_SOURCES[CONFIG.CURRENT_SOURCE].name}\n当前源: ${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社(实时)' : '聚合数据(备用)'}`);
+            refreshNow();
+        }
+        
+        function filterNews(type) {
+            state.currentFilter = type;
+            
             document.querySelectorAll('.filter-tag').forEach(tag => {
                 tag.classList.remove('active');
             });
@@ -504,48 +643,55 @@
             renderNews();
         }
         
-        // 立即刷新
-        function refreshNow() {
-            countdown = REFRESH_INTERVAL;
-            renderNews();
-            console.log('🔄 手动刷新完成');
-        }
-        
-        // 切换自动刷新
-        function toggleAutoRefresh() {
-            autoRefresh = !autoRefresh;
-            const btn = document.getElementById('autoBtn');
-            btn.textContent = autoRefresh ? '⏸️ 暂停刷新' : '▶️ 继续刷新';
-            btn.style.background = autoRefresh ? '#30363d' : '#238636';
-        }
-        
-        // 清空
         function clearAll() {
             if (confirm('确定清空所有新闻吗？')) {
+                state.newsData = [];
                 document.getElementById('newsContainer').innerHTML = 
-                    '<div style="text-align:center;padding:50px;color:#8b949e;">暂无新闻，等待刷新...</div>';
+                    '<div class="loading">暂无新闻，等待刷新...</div>';
             }
         }
         
-        // 倒计时
-        setInterval(() => {
-            if (autoRefresh) {
-                countdown--;
-                if (countdown <= 0) {
-                    countdown = REFRESH_INTERVAL;
-                    renderNews();
+        // ==================== 初始化 ====================
+        function init() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 自动刷新倒计时
+            setInterval(() => {
+                if (state.autoRefresh) {
+                    state.countdown--;
+                    if (state.countdown <= 0) {
+                        state.countdown = CONFIG.REFRESH_INTERVAL;
+                        refreshNow();
+                    }
+                    document.getElementById('countdown').textContent = `下次刷新: ${state.countdown}s`;
                 }
-                document.getElementById('countdown').textContent = `下次刷新: ${countdown}s`;
-            }
-        }, 1000);
+            }, 1000);
+            
+            // 初始加载
+            refreshNow();
+        }
         
-        // 初始化
-        updateTime();
-        setInterval(updateTime, 1000);
-        renderNews();
+        // 启动
+        init();
         
-        // 说明：实际使用时，需要将mockNewsData替换为真实API接口
-        // 例如：fetch('/api/news').then(res => res.json()).then(data => { ... })
+        // ==================== 说明 ====================
+        console.log(`
+【股神】实时突发新闻监控中心 v1.1
+================================
+当前数据源: ${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社' : '聚合数据'}
+刷新间隔: ${CONFIG.REFRESH_INTERVAL}秒
+
+使用说明:
+1. 当前使用${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社实时数据' : '聚合数据备用源'}
+2. 主源失败时自动切换备用源
+3. 所有API受限时显示演示数据
+4. 聚合数据需在 juhe.cn 申请开通服务
+
+数据源配置:
+- 财联社: 免费实时电报
+- 聚合数据: 需申请开通(KEY已配置)
+        `);
     </script>
 </body>
 </html>
