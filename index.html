@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【股神】实时突发新闻监控中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(31, 111, 235, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .header .time {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #238636;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+        
+        .btn-secondary {
+            background: #30363d;
+            color: #c9d1d9;
+        }
+        
+        .btn-secondary:hover {
+            background: #3d444d;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            overflow-x: auto;
+        }
+        
+        .filter-tag {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            border: 1px solid #30363d;
+            transition: all 0.3s;
+        }
+        
+        .filter-tag.active {
+            background: #1f6feb;
+            border-color: #1f6feb;
+            color: white;
+        }
+        
+        .filter-tag:not(.active):hover {
+            background: #21262d;
+        }
+        
+        .news-container {
+            padding: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .news-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .news-item:hover {
+            border-color: #1f6feb;
+            box-shadow: 0 4px 20px rgba(31, 111, 235, 0.1);
+        }
+        
+        .news-item.urgent {
+            border-left: 4px solid #da3633;
+            background: linear-gradient(90deg, rgba(218, 54, 51, 0.1) 0%, #161b22 100%);
+        }
+        
+        .news-item.warning {
+            border-left: 4px solid #d29922;
+            background: linear-gradient(90deg, rgba(210, 153, 34, 0.1) 0%, #161b22 100%);
+        }
+        
+        .news-item.info {
+            border-left: 4px solid #1f6feb;
+        }
+        
+        .news-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .source-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        
+        .source-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .source-caixun { background: #e11d48; color: white; }
+        .source-tonghuashun { background: #f97316; color: white; }
+        .source-dongfang { background: #3b82f6; color: white; }
+        .source-xueqiu { background: #10b981; color: white; }
+        .source-juchao { background: #8b5cf6; color: white; }
+        
+        .time-tag {
+            font-size: 12px;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .time-tag.new::before {
+            content: "●";
+            color: #3fb950;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .news-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .news-content {
+            font-size: 14px;
+            color: #b1bac4;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .sop-box {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .sop-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f6feb;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sop-title::before {
+            content: "📋";
+        }
+        
+        .sop-content {
+            font-size: 13px;
+            color: #c9d1d9;
+            line-height: 1.8;
+        }
+        
+        .sop-step {
+            padding: 5px 0;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .sop-step:last-child {
+            border-bottom: none;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .tag-policy { background: rgba(31, 111, 235, 0.2); color: #58a6ff; }
+        .tag-earnings { background: rgba(35, 134, 54, 0.2); color: #3fb950; }
+        .tag-risk { background: rgba(218, 54, 51, 0.2); color: #f85149; }
+        .tag-industry { background: rgba(210, 153, 34, 0.2); color: #e3b341; }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #8b949e;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            animation: pulse 2s infinite;
+        }
+        
+        .refresh-countdown {
+            font-family: monospace;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .news-item {
+                padding: 15px;
+            }
+            
+            .news-title {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📈 【股神】实时突发新闻监控中心</h1>
+        <div class="subtitle">CGD策略 · 实时响应 · 标准SOP</div>
+        <div class="time" id="currentTime">--</div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn btn-primary" onclick="refreshNow()">🔄 立即刷新</button>
+        <button class="btn btn-secondary" onclick="toggleAutoRefresh()" id="autoBtn">⏸️ 暂停刷新</button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑️ 清空</button>
+    </div>
+    
+    <div class="filters">
+        <div class="filter-tag active" onclick="filterNews('all')">全部</div>
+        <div class="filter-tag" onclick="filterNews('policy')">政策</div>
+        <div class="filter-tag" onclick="filterNews('earnings')">业绩</div>
+        <div class="filter-tag" onclick="filterNews('risk')">风险</div>
+        <div class="filter-tag" onclick="filterNews('industry')">行业</div>
+    </div>
+    
+    <div class="news-container" id="newsContainer">
+        <!-- 新闻内容将动态插入 -->
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>系统运行中</span>
+        </div>
+        <div class="refresh-countdown" id="countdown">下次刷新: 30s</div>
+    </div>
+
+    <script>
+        // 配置
+        const REFRESH_INTERVAL = 30; // 30秒刷新
+        let countdown = REFRESH_INTERVAL;
+        let autoRefresh = true;
+        let currentFilter = 'all';
+        
+        // 模拟新闻数据（实际使用时接入API）
+        const mockNewsData = [
+            {
+                id: 1,
+                source: '财联社',
+                sourceCode: 'caixun',
+                time: new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
+                title: '央行意外降准50BP，释放流动性约1万亿',
+                content: '中国人民银行决定下调金融机构存款准备金率0.5个百分点，此次降准为年内首次，超出市场预期。',
+                type: 'policy',
+                level: 'urgent',
+                tags: ['政策', '央行', '降准'],
+                sop: [
+                    '1. 立即查看持仓股是否受利好（金融/地产板块）',
+                    '2. 如高开>2%，暂停新买入计划',
+                    '3. 已持仓且盈利的，可考虑减仓10-20%',
+                    '4. 关注成交量是否放大验证利好',
+                    '5. 尾盘决定是否加仓，不追高'
+                ]
+            },
+            {
+                id: 2,
+                source: '同花顺',
+                sourceCode: 'tonghuashun',
+                time: new Date(Date.now() - 5*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
+                title: '宁德时代发布一季报预告：净利润同比增长50-70%',
+                content: '宁德时代公告，预计Q1净利润同比增长50%-70%，主要受益于新能源汽车销量增长和产能释放。',
+                type: 'earnings',
+                level: 'info',
+                tags: ['业绩', '宁德时代', '利好'],
+                sop: [
+                    '1. CGD评分上调10-15分，可加仓至目标仓位',
+                    '2. 如高开>5%，减仓50%锁定利润',
+                    '3. 观察成交量，放量上涨则持有',
+                    '4. 设置止盈位：+12%清仓',
+                    '5. 关注板块联动，带动效应决定是否追加'
+                ]
+            },
+            {
+                id: 3,
+                source: '巨潮资讯',
+                sourceCode: 'juchao',
+                time: new Date(Date.now() - 12*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
+                title: '东方财富：控股股东计划减持不超过2%股份',
+                content: '东方财富公告，控股股东拟通过大宗交易方式减持不超过2%公司股份，减持原因为资金需求。',
+                type: 'risk',
+                level: 'warning',
+                tags: ['减持', '东方财富', '风险'],
+                sop: [
+                    '1. 立即减仓50%，锁定部分利润',
+                    '2. 观察市场情绪，如跌超-3%清仓',
+                    '3. CGD评分下调，暂停加仓计划',
+                    '4. 关注后续是否有机构接盘',
+                    '5. 3日内不反弹，全部离场'
+                ]
+            },
+            {
+                id: 4,
+                source: '财联社',
+                sourceCode: 'caixun',
+                time: new Date(Date.now() - 20*60000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
+                title: '工信部：将出台新能源汽车购置税减免延续政策',
+                content: '工信部部长表示，正在研究制定新能源汽车购置税减免政策延续方案，预计近期发布。',
+                type: 'industry',
+                level: 'info',
+                tags: ['行业', '新能源', '政策'],
+                sop: [
+                    '1. 比亚迪/CATL等受益股CGD评分上调',
+                    '2. 如未建仓，回调时可加仓',
+                    '3. 已持仓的继续持有',
+                    '4. 关注政策正式发布时间点',
+                    '5. 利好兑现时（发布日）考虑减仓'
+                ]
+            }
+        ];
+        
+        // 更新当前时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleString('zh-CN', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+        }
+        
+        // 渲染新闻
+        function renderNews() {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '';
+            
+            let displayData = mockNewsData;
+            if (currentFilter !== 'all') {
+                displayData = mockNewsData.filter(item => item.type === currentFilter);
+            }
+            
+            displayData.forEach(item => {
+                const newsEl = document.createElement('div');
+                newsEl.className = `news-item ${item.level}`;
+                
+                const tagsHtml = item.tags.map(tag => `<span class="tag tag-${item.type}">${tag}</span>`).join('');
+                const sopHtml = item.sop.map(step => `<div class="sop-step">${step}</div>`).join('');
+                
+                newsEl.innerHTML = `
+                    <div class="news-header">
+                        <div class="source-tag">
+                            <div class="source-icon source-${item.sourceCode}">${item.source[0]}</div>
+                            <span>${item.source}</span>
+                        </div>
+                        <div class="time-tag new">${item.time}</div>
+                    </div>
+                    <div class="news-title">${item.title}</div>
+                    <div class="news-content">${item.content}</div>
+                    <div>${tagsHtml}</div>
+                    <div class="sop-box">
+                        <div class="sop-title">【股神】应对SOP</div>
+                        <div class="sop-content">${sopHtml}</div>
+                    </div>
+                `;
+                
+                container.appendChild(newsEl);
+            });
+        }
+        
+        // 筛选新闻
+        function filterNews(type) {
+            currentFilter = type;
+            
+            // 更新筛选标签样式
+            document.querySelectorAll('.filter-tag').forEach(tag => {
+                tag.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderNews();
+        }
+        
+        // 立即刷新
+        function refreshNow() {
+            countdown = REFRESH_INTERVAL;
+            renderNews();
+            console.log('🔄 手动刷新完成');
+        }
+        
+        // 切换自动刷新
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoBtn');
+            btn.textContent = autoRefresh ? '⏸️ 暂停刷新' : '▶️ 继续刷新';
+            btn.style.background = autoRefresh ? '#30363d' : '#238636';
+        }
+        
+        // 清空
+        function clearAll() {
+            if (confirm('确定清空所有新闻吗？')) {
+                document.getElementById('newsContainer').innerHTML = 
+                    '<div style="text-align:center;padding:50px;color:#8b949e;">暂无新闻，等待刷新...</div>';
+            }
+        }
+        
+        // 倒计时
+        setInterval(() => {
+            if (autoRefresh) {
+                countdown--;
+                if (countdown <= 0) {
+                    countdown = REFRESH_INTERVAL;
+                    renderNews();
+                }
+                document.getElementById('countdown').textContent = `下次刷新: ${countdown}s`;
+            }
+        }, 1000);
+        
+        // 初始化
+        updateTime();
+        setInterval(updateTime, 1000);
+        renderNews();
+        
+        // 说明：实际使用时，需要将mockNewsData替换为真实API接口
+        // 例如：fetch('/api/news').then(res => res.json()).then(data => { ... })
+    </script>
+</body>
+</html>
