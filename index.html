@@ -268,11 +268,14 @@
     <div class="source-status">
         <div class="source-item">
             <div class="source-dot active" id="caixun-dot"></div>
-            <span>财联社(实时)</span>
+            <span>财联社(30s)</span>
         </div>
         <div class="source-item">
             <div class="source-dot standby" id="juhe-dot"></div>
-            <span>聚合数据(备用)</span>
+            <span id="juhe-status">聚合数据(30min)</span>
+        </div>
+        <div class="source-item" id="api-quota" style="display:none;">
+            <span>🔑 剩余: --/--</span>
         </div>
         <div class="source-item">
             <span id="last-update">最后更新: --</span>
@@ -309,21 +312,31 @@
     <script>
         // ==================== 配置 ====================
         const CONFIG = {
-            REFRESH_INTERVAL: 30,  // 刷新间隔(秒)
-            CURRENT_SOURCE: 'caixun',  // 当前数据源: caixun/juhe
+            // 刷新间隔配置(秒) - 根据数据源自动调整
+            REFRESH_INTERVALS: {
+                caixun: 30,      // 财联社: 30秒 (无限制)
+                juhe: 1800,      // 聚合数据: 30分钟 (免费版50次/天)
+                mock: 60         // 演示数据: 1分钟
+            },
+            CURRENT_SOURCE: 'caixun',  // 当前数据源: caixun/juhe/mock
             JUHE_API_KEY: '562dfd5d134a762eec3e7d522d009f88',  // 聚合数据KEY
-            MAX_NEWS_ITEMS: 50  // 最大保留新闻条数
+            JUHE_DAILY_LIMIT: 50,      // 聚合数据免费版日限额
+            MAX_NEWS_ITEMS: 50         // 最大保留新闻条数
         };
         
         // ==================== 状态管理 ====================
         let state = {
-            countdown: CONFIG.REFRESH_INTERVAL,
+            countdown: CONFIG.REFRESH_INTERVALS.caixun,
             autoRefresh: true,
             currentFilter: 'all',
             newsData: [],
             lastFetchTime: null,
+            apiCallCount: {           // API调用计数
+                juhe: 0,              // 今日已调用次数
+                lastResetDate: new Date().toDateString()  // 上次重置日期
+            },
             sourceStatus: {
-                caixun: 'active',  // active/standby/offline
+                caixun: 'active',     // active/standby/offline
                 juhe: 'standby'
             }
         };
@@ -428,6 +441,55 @@
                 `最后更新: ${state.lastFetchTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}`;
         }
         
+        // 检查并重置API计数（每日重置）
+        function checkAndResetApiCount() {
+            const today = new Date().toDateString();
+            if (state.apiCallCount.lastResetDate !== today) {
+                state.apiCallCount.juhe = 0;
+                state.apiCallCount.lastResetDate = today;
+                console.log('🔄 API计数已重置（新的一天）');
+            }
+        }
+        
+        // 增加API调用计数
+        function incrementApiCount(source) {
+            if (source === 'juhe') {
+                checkAndResetApiCount();
+                state.apiCallCount.juhe++;
+                updateApiQuotaDisplay();
+                
+                // 检查是否接近限额
+                if (state.apiCallCount.juhe >= CONFIG.JUHE_DAILY_LIMIT * 0.8) {
+                    console.warn(`⚠️ 聚合数据API已使用 ${state.apiCallCount.juhe}/${CONFIG.JUHE_DAILY_LIMIT} 次`);
+                }
+            }
+        }
+        
+        // 更新API配额显示
+        function updateApiQuotaDisplay() {
+            const quotaEl = document.getElementById('api-quota');
+            const juheStatusEl = document.getElementById('juhe-status');
+            
+            if (CONFIG.CURRENT_SOURCE === 'juhe') {
+                checkAndResetApiCount();
+                quotaEl.style.display = 'flex';
+                const remaining = CONFIG.JUHE_DAILY_LIMIT - state.apiCallCount.juhe;
+                quotaEl.innerHTML = `<span>🔑 剩余: ${remaining}/${CONFIG.JUHE_DAILY_LIMIT}</span>`;
+                
+                // 更新频率显示
+                juheStatusEl.textContent = `聚合数据(30min)`;
+            } else {
+                quotaEl.style.display = 'none';
+                juheStatusEl.textContent = '聚合数据(30min)';
+            }
+        }
+        
+        // 获取当前刷新间隔
+        function getRefreshInterval() {
+            const interval = CONFIG.REFRESH_INTERVALS[CONFIG.CURRENT_SOURCE] || CONFIG.REFRESH_INTERVALS.mock;
+            return interval;
+        }
+        
         function classifyNewsType(title, content) {
             const text = (title + content).toLowerCase();
             if (text.includes('减持') || text.includes('解禁') || text.includes('退市') || text.includes('处罚')) {
@@ -501,10 +563,21 @@
         }
         
         async function fetchJuHe() {
+            // 检查是否超过限额
+            checkAndResetApiCount();
+            if (state.apiCallCount.juhe >= CONFIG.JUHE_DAILY_LIMIT) {
+                console.warn('⚠️ 聚合数据API今日已达上限(50次)，请切换数据源或明日再试');
+                updateSystemStatus('聚合数据API额度已用完');
+                return null;
+            }
+            
             try {
                 const { stockUrl } = DATA_SOURCES.juhe;
                 const response = await fetch(`${stockUrl}?key=${CONFIG.JUHE_API_KEY}&gid=sh601166`);
                 const data = await response.json();
+                
+                // 记录API调用
+                incrementApiCount('juhe');
                 
                 if (data.resultcode === '200') {
                     state.sourceStatus.juhe = 'active';
@@ -610,12 +683,13 @@
         
         // ==================== 事件处理 ====================
         async function refreshNow() {
-            state.countdown = CONFIG.REFRESH_INTERVAL;
+            state.countdown = getRefreshInterval();
             const container = document.getElementById('newsContainer');
             container.innerHTML = '<div class="loading">正在刷新数据...</div>';
             
             state.newsData = await fetchNews();
             renderNews();
+            updateApiQuotaDisplay();  // 更新API配额显示
             console.log('🔄 手动刷新完成');
         }
         
@@ -627,8 +701,19 @@
         }
         
         function switchSource() {
-            CONFIG.CURRENT_SOURCE = CONFIG.CURRENT_SOURCE === 'caixun' ? 'juhe' : 'caixun';
-            alert(`已切换至: ${DATA_SOURCES[CONFIG.CURRENT_SOURCE].name}\n当前源: ${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社(实时)' : '聚合数据(备用)'}`);
+            const newSource = CONFIG.CURRENT_SOURCE === 'caixun' ? 'juhe' : 'caixun';
+            CONFIG.CURRENT_SOURCE = newSource;
+            
+            // 重置倒计时
+            state.countdown = getRefreshInterval();
+            
+            const intervalText = getRefreshInterval() >= 60 
+                ? `${getRefreshInterval()/60}分钟` 
+                : `${getRefreshInterval()}秒`;
+            
+            alert(`已切换至: ${DATA_SOURCES[newSource].name}\n刷新间隔: ${intervalText}\n${newSource === 'juhe' ? '⚠️ 免费版限50次/天' : ''}`);
+            
+            updateApiQuotaDisplay();
             refreshNow();
         }
         
@@ -653,6 +738,10 @@
         
         // ==================== 初始化 ====================
         function init() {
+            // 初始化API计数
+            checkAndResetApiCount();
+            state.countdown = getRefreshInterval();
+            
             updateTime();
             setInterval(updateTime, 1000);
             
@@ -661,15 +750,20 @@
                 if (state.autoRefresh) {
                     state.countdown--;
                     if (state.countdown <= 0) {
-                        state.countdown = CONFIG.REFRESH_INTERVAL;
+                        state.countdown = getRefreshInterval();
                         refreshNow();
                     }
-                    document.getElementById('countdown').textContent = `下次刷新: ${state.countdown}s`;
+                    const interval = getRefreshInterval();
+                    const displayTime = interval >= 60 
+                        ? `${Math.floor(state.countdown / 60)}m${state.countdown % 60}s`
+                        : `${state.countdown}s`;
+                    document.getElementById('countdown').textContent = `下次刷新: ${displayTime}`;
                 }
             }, 1000);
             
             // 初始加载
             refreshNow();
+            updateApiQuotaDisplay();
         }
         
         // 启动
@@ -677,20 +771,26 @@
         
         // ==================== 说明 ====================
         console.log(`
-【股神】实时突发新闻监控中心 v1.1
+【股神】实时突发新闻监控中心 v1.2
 ================================
-当前数据源: ${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社' : '聚合数据'}
-刷新间隔: ${CONFIG.REFRESH_INTERVAL}秒
+当前数据源: ${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社' : CONFIG.CURRENT_SOURCE === 'juhe' ? '聚合数据' : '演示数据'}
+刷新间隔: ${getRefreshInterval() >= 60 ? getRefreshInterval()/60 + '分钟' : getRefreshInterval() + '秒'}
 
 使用说明:
-1. 当前使用${CONFIG.CURRENT_SOURCE === 'caixun' ? '财联社实时数据' : '聚合数据备用源'}
-2. 主源失败时自动切换备用源
-3. 所有API受限时显示演示数据
-4. 聚合数据需在 juhe.cn 申请开通服务
+1. 财联社: 30秒刷新（无限制）
+2. 聚合数据: 30分钟刷新（50次/天）
+3. 主源失败时自动切换备用源
+4. API受限时显示演示数据
 
 数据源配置:
-- 财联社: 免费实时电报
-- 聚合数据: 需申请开通(KEY已配置)
+- 财联社: 免费实时电报，30秒刷新
+- 聚合数据: 免费版50次/天，30分钟刷新
+- 演示数据: 本地模拟，60秒刷新
+
+API配额管理:
+- 自动统计每日API调用次数
+- 接近限额时自动提醒
+- 超额时自动切换到备用源
         `);
     </script>
 </body>
